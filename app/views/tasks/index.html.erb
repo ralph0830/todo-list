@@ -198,6 +198,11 @@ function selectRecurringOption(button, frequency) {
                 <span class="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-full hover:bg-gray-200 transition-colors duration-150">
                   #<%= index + 1 %>
                 </span>
+                <button type="button" 
+                        onclick="deleteTask(<%= task.id %>, '<%= task.content %>')"
+                        class="w-6 h-6 bg-transparent hover:bg-red-100 text-red-600 hover:text-red-700 rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-110 cursor-pointer touch-friendly">
+                  <span class="text-sm font-bold">✕</span>
+                </button>
               </div>
             <% end %>
           </div>
@@ -277,6 +282,11 @@ function selectRecurringOption(button, frequency) {
                 <span class="text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full font-medium hover:bg-green-200 transition-colors duration-150">
                   완료
                 </span>
+                <button type="button" 
+                        onclick="deleteTask(<%= task.id %>, '<%= task.content %>')"
+                        class="w-6 h-6 bg-transparent hover:bg-red-100 text-red-600 hover:text-red-700 rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-110 cursor-pointer touch-friendly">
+                  <span class="text-sm font-bold">✕</span>
+                </button>
               </div>
             <% end %>
           </div>
@@ -340,7 +350,7 @@ function selectRecurringOption(button, frequency) {
                 </span>
                 <button type="button" 
                         onclick="deleteRecurringTask(<%= recurring_task.id %>, '<%= recurring_task.content %>')"
-                        class="w-6 h-6 bg-red-100 hover:bg-red-200 text-red-600 hover:text-red-700 rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-110 cursor-pointer touch-friendly">
+                        class="w-6 h-6 bg-transparent hover:bg-red-100 text-red-600 hover:text-red-700 rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-110 cursor-pointer touch-friendly">
                   <span class="text-sm font-bold">✕</span>
                 </button>
               </div>
@@ -379,6 +389,36 @@ function deleteRecurringTask(id, content) {
     const form = document.createElement('form');
     form.method = 'POST';
     form.action = `/recurring_tasks/${id}`;
+    form.style.display = 'none';
+    
+    // Rails의 CSRF 토큰 추가
+    const csrfToken = document.querySelector('meta[name="csrf-token"]');
+    if (csrfToken) {
+      const csrfInput = document.createElement('input');
+      csrfInput.type = 'hidden';
+      csrfInput.name = 'authenticity_token';
+      csrfInput.value = csrfToken.getAttribute('content');
+      form.appendChild(csrfInput);
+    }
+    
+    // HTTP METHOD 오버라이드를 위한 _method 파라미터 추가
+    const methodInput = document.createElement('input');
+    methodInput.type = 'hidden';
+    methodInput.name = '_method';
+    methodInput.value = 'DELETE';
+    form.appendChild(methodInput);
+    
+    document.body.appendChild(form);
+    form.submit();
+  }
+}
+
+function deleteTask(id, content) {
+  if (confirm(`"${content}" 할일을 삭제하시겠습니까?`)) {
+    // 삭제 요청을 위한 폼을 동적으로 생성하고 제출
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/tasks/${id}`;
     form.style.display = 'none';
     
     // Rails의 CSRF 토큰 추가
