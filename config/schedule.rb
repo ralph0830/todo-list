@@ -2,22 +2,26 @@
 # 매일 08:00, 13:00, 17:00에 리마인더 이메일 발송
 
 # 환경 설정
-set :environment, 'development'  # 프로덕션에서는 'production'으로 변경
-set :output, 'log/cron.log'      # 크론 로그 파일 위치
+set :environment, 'production'
+set :output, '/app/log/cron.log'
 
 # 시간대 설정 (한국 시간)
 set :chronic_options, :time_zone => 'Asia/Seoul'
 
-# Rails 앱 경로 설정 (프로덕션에서는 실제 경로로 변경)
-job_type :rake_with_env, 'cd :path && :environment_variable=:environment bundle exec rake :task --silent :output'
+# PATH와 bundler 경로 설정
+ENV.each { |k, v| env(k, v) }
+set :path, '/app'
+
+# 절대 경로를 사용한 rake 실행
+job_type :rake_with_env, 'cd /app && /usr/local/bin/bundle exec rake :task RAILS_ENV=production >> /app/log/cron.log 2>&1'
 
 # 매일 07:00 (반복 할일 생성) - 리마인더보다 먼저 실행
 every 1.day, at: '7:00 am' do
   rake_with_env 'recurring_tasks:generate_daily'
 end
 
-# 매일 08:00 (아침 리마인더)
-every 1.day, at: '8:00 am' do
+# 매일 08:30 (아침 리마인더)
+every 1.day, at: '8:30 am' do
   rake_with_env 'todo_reminder:send_reminders'
 end
 
