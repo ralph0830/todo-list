@@ -1,0 +1,208 @@
+<!-- Header -->
+<div class="text-center mb-8 animate-slide-in-down">
+  <h2 class="text-3xl font-bold text-gray-800 mb-2">반복 할일 관리</h2>
+  <p class="text-gray-600">규칙적인 할 일을 자동으로 생성해보세요 🔄</p>
+</div>
+
+<!-- Navigation -->
+<div class="mb-6 text-center">
+  <%= link_to "← 일반 할일로 돌아가기", root_path, 
+      class: "inline-flex items-center px-4 py-2 text-sm text-indigo-600 hover:text-indigo-700 font-medium" %>
+</div>
+
+<!-- Statistics -->
+<div class="mb-8 animate-fade-in">
+  <div class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-4">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+      <div class="flex items-center space-x-3">
+        <div class="w-8 h-8 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
+          <span class="text-white text-sm">🔄</span>
+        </div>
+        <div class="text-sm text-gray-700">
+          <span class="font-semibold">반복 할일 현황:</span>
+          <% active_count = @recurring_tasks.select(&:active?).count %>
+          <% inactive_count = @recurring_tasks.count - active_count %>
+          <span class="text-indigo-600 font-bold"><%= active_count %>개 활성</span>
+        </div>
+      </div>
+      <div class="flex items-center justify-center sm:justify-end space-x-3 sm:space-x-4 text-sm">
+        <div class="flex items-center space-x-1">
+          <span class="w-3 h-3 bg-green-400 rounded-full flex-shrink-0"></span>
+          <span class="text-gray-600 whitespace-nowrap">활성 <%= active_count %></span>
+        </div>
+        <div class="flex items-center space-x-1">
+          <span class="w-3 h-3 bg-gray-400 rounded-full flex-shrink-0"></span>
+          <span class="text-gray-600 whitespace-nowrap">비활성 <%= inactive_count %></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- New Recurring Task Form -->
+<div class="mb-8 animate-slide-in-up">
+  <div class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-6 glass hover-glow">
+    <h3 class="text-lg font-semibold text-gray-800 mb-4">새 반복 할일 추가</h3>
+    
+    <%= form_with(model: @recurring_task, url: recurring_tasks_path, method: :post, local: true, class: "space-y-4") do |form| %>
+      <!-- 할일 내용 -->
+      <div>
+        <%= form.label :content, "할일 내용", class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= form.text_field :content, 
+            placeholder: "반복할 할일을 입력하세요...", 
+            class: "w-full px-4 py-3 text-lg border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white custom-input focus-ring touch-friendly",
+            required: true,
+            maxlength: 200 %>
+      </div>
+
+      <!-- 반복 주기 -->
+      <div>
+        <%= form.label :frequency, "반복 주기", class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= form.select :frequency, 
+            options_for_select([
+              ['매일', 'daily'],
+              ['매주', 'weekly'], 
+              ['매월', 'monthly']
+            ], @recurring_task.frequency),
+            { prompt: "반복 주기를 선택하세요" },
+            { class: "w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white",
+              required: true,
+              onchange: "toggleFrequencyOptions(this.value)" } %>
+      </div>
+
+      <!-- 주간 반복 옵션 -->
+      <div id="weekly-options" style="display: none;">
+        <%= form.label :weekdays, "반복할 요일", class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <div class="flex flex-wrap gap-2">
+          <% %w[일 월 화 수 목 금 토].each_with_index do |day, index| %>
+            <label class="flex items-center">
+              <%= check_box_tag "weekdays[]", index, false, 
+                  class: "sr-only peer", 
+                  id: "weekday_#{index}" %>
+              <div class="px-3 py-2 text-sm border border-gray-300 rounded-lg cursor-pointer peer-checked:bg-indigo-500 peer-checked:text-white peer-checked:border-indigo-500 transition-all">
+                <%= day %>
+              </div>
+            </label>
+          <% end %>
+        </div>
+      </div>
+
+      <!-- 월간 반복 옵션 -->
+      <div id="monthly-options" style="display: none;">
+        <%= form.label :monthly_day, "매월 반복할 일자", class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= form.number_field :monthly_day,
+            min: 1, max: 31,
+            placeholder: "1-31",
+            class: "w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white" %>
+      </div>
+
+      <!-- 설명 (선택사항) -->
+      <div>
+        <%= form.label :description, "설명 (선택사항)", class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= form.text_area :description,
+            placeholder: "반복 할일에 대한 추가 설명을 입력하세요...",
+            rows: 2,
+            class: "w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white resize-none" %>
+      </div>
+
+      <div class="flex justify-end">
+        <%= form.submit "반복 할일 추가", 
+            class: "px-6 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-semibold rounded-xl hover:from-purple-600 hover:to-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transform hover:scale-105 transition-all duration-200 shadow-lg cursor-pointer touch-friendly hover-lift focus-ring" %>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<!-- Existing Recurring Tasks -->
+<div class="space-y-6">
+  <% if @recurring_tasks.any? %>
+    <div class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-6">
+      <div class="flex items-center mb-6">
+        <div class="w-8 h-8 bg-gradient-to-br from-purple-400 to-purple-600 rounded-lg flex items-center justify-center mr-3">
+          <span class="text-white text-sm font-bold">📋</span>
+        </div>
+        <h3 class="text-xl font-bold text-gray-800">등록된 반복 할일</h3>
+        <span class="ml-auto bg-purple-100 text-purple-800 text-sm font-medium px-3 py-1 rounded-full">
+          <%= @recurring_tasks.count %>개
+        </span>
+      </div>
+      
+      <div class="space-y-3">
+        <% @recurring_tasks.each_with_index do |recurring_task, index| %>
+          <div class="group bg-gray-50/80 hover:bg-white rounded-xl p-4 transition-all duration-200 hover:shadow-md border border-gray-100 hover-lift mobile-card animate-fade-in touch-friendly <%= 'opacity-50' unless recurring_task.active? %>" style="animation-delay: <%= (index * 0.1) %>s;">
+            <div class="flex items-center justify-between">
+              <div class="flex-grow">
+                <div class="flex items-center space-x-3">
+                  <!-- Active Status Toggle -->
+                  <%= link_to toggle_active_recurring_task_path(recurring_task), method: :patch, 
+                      class: "flex items-center space-x-2 hover:bg-gray-100 rounded-lg p-1 transition-colors" do %>
+                    <div class="w-6 h-6 rounded-full flex items-center justify-center <%= recurring_task.active? ? 'bg-green-500' : 'bg-gray-400' %> transition-colors">
+                      <span class="text-white text-xs font-bold"><%= recurring_task.active? ? '✓' : '⏸' %></span>
+                    </div>
+                  <% end %>
+                  
+                  <div class="flex-grow">
+                    <h4 class="text-lg font-medium text-gray-800 <%= 'line-through' unless recurring_task.active? %>">
+                      <%= recurring_task.content %>
+                    </h4>
+                    <div class="flex items-center space-x-2 text-sm text-gray-500 mt-1">
+                      <span class="px-2 py-1 bg-indigo-100 text-indigo-800 rounded-full font-medium">
+                        <%= case recurring_task.frequency
+                            when 'daily' then '매일'
+                            when 'weekly' then "매주 #{recurring_task.weekdays_array.map{|d| %w[일 월 화 수 목 금 토][d]}.join(', ')}"
+                            when 'monthly' then "매월 #{recurring_task.monthly_day}일"
+                            end %>
+                      </span>
+                      <% if recurring_task.last_generated_at %>
+                        <span class="text-gray-400">마지막 생성: <%= recurring_task.last_generated_at.strftime('%m/%d %H:%M') %></span>
+                      <% end %>
+                    </div>
+                    <% if recurring_task.description.present? %>
+                      <p class="text-sm text-gray-600 mt-1"><%= recurring_task.description %></p>
+                    <% end %>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                <%= link_to "수정", edit_recurring_task_path(recurring_task),
+                    class: "px-3 py-1 text-sm bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg transition-colors touch-friendly" %>
+                <%= link_to "삭제", recurring_task_path(recurring_task), 
+                    method: :delete,
+                    confirm: "정말로 이 반복 할일을 삭제하시겠습니까?",
+                    class: "px-3 py-1 text-sm bg-red-100 text-red-700 hover:bg-red-200 rounded-lg transition-colors touch-friendly" %>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% else %>
+    <!-- Empty State -->
+    <div class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8 text-center">
+      <div class="w-20 h-20 bg-gradient-to-br from-purple-100 to-purple-200 rounded-full flex items-center justify-center mx-auto mb-4">
+        <span class="text-purple-400 text-3xl">🔄</span>
+      </div>
+      <h3 class="text-xl font-semibold text-gray-700 mb-2">등록된 반복 할일이 없습니다</h3>
+      <p class="text-gray-500">새로운 반복 할일을 추가해서 자동화된 할일 관리를 시작해보세요!</p>
+    </div>
+  <% end %>
+</div>
+
+<script>
+function toggleFrequencyOptions(frequency) {
+  const weeklyOptions = document.getElementById('weekly-options');
+  const monthlyOptions = document.getElementById('monthly-options');
+  
+  // 모든 옵션 숨기기
+  weeklyOptions.style.display = 'none';
+  monthlyOptions.style.display = 'none';
+  
+  // 선택된 주기에 따라 옵션 표시
+  if (frequency === 'weekly') {
+    weeklyOptions.style.display = 'block';
+  } else if (frequency === 'monthly') {
+    monthlyOptions.style.display = 'block';
+  }
+}
+</script>

@@ -1,0 +1,118 @@
+<!-- Header -->
+<div class="text-center mb-8 animate-slide-in-down">
+  <h2 class="text-3xl font-bold text-gray-800 mb-2">반복 할일 수정</h2>
+  <p class="text-gray-600">반복 할일 설정을 변경하세요 ✏️</p>
+</div>
+
+<!-- Navigation -->
+<div class="mb-6 text-center">
+  <%= link_to "← 반복 할일 목록", recurring_tasks_path, 
+      class: "inline-flex items-center px-4 py-2 text-sm text-indigo-600 hover:text-indigo-700 font-medium" %>
+</div>
+
+<!-- Edit Form -->
+<div class="mb-8 animate-slide-in-up">
+  <div class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-6 glass hover-glow">
+    
+    <%= form_with(model: @recurring_task, url: recurring_task_path(@recurring_task), method: :patch, local: true, class: "space-y-4") do |form| %>
+      <!-- 할일 내용 -->
+      <div>
+        <%= form.label :content, "할일 내용", class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= form.text_field :content, 
+            class: "w-full px-4 py-3 text-lg border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white custom-input focus-ring touch-friendly",
+            required: true,
+            maxlength: 200 %>
+      </div>
+
+      <!-- 반복 주기 -->
+      <div>
+        <%= form.label :frequency, "반복 주기", class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= form.select :frequency, 
+            options_for_select([
+              ['매일', 'daily'],
+              ['매주', 'weekly'], 
+              ['매월', 'monthly']
+            ], @recurring_task.frequency),
+            {},
+            { class: "w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white",
+              required: true,
+              onchange: "toggleFrequencyOptions(this.value)" } %>
+      </div>
+
+      <!-- 주간 반복 옵션 -->
+      <div id="weekly-options" style="display: <%= @recurring_task.weekly? ? 'block' : 'none' %>;">
+        <%= form.label :weekdays, "반복할 요일", class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <div class="flex flex-wrap gap-2">
+          <% selected_weekdays = @recurring_task.weekdays_array %>
+          <% %w[일 월 화 수 목 금 토].each_with_index do |day, index| %>
+            <label class="flex items-center">
+              <%= check_box_tag "recurring_task[weekdays][]", index, 
+                  selected_weekdays.include?(index), 
+                  class: "sr-only peer", 
+                  id: "weekday_#{index}" %>
+              <div class="px-3 py-2 text-sm border border-gray-300 rounded-lg cursor-pointer peer-checked:bg-indigo-500 peer-checked:text-white peer-checked:border-indigo-500 transition-all">
+                <%= day %>
+              </div>
+            </label>
+          <% end %>
+        </div>
+      </div>
+
+      <!-- 월간 반복 옵션 -->
+      <div id="monthly-options" style="display: <%= @recurring_task.monthly? ? 'block' : 'none' %>;">
+        <%= form.label :monthly_day, "매월 반복할 일자", class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= form.number_field :monthly_day,
+            min: 1, max: 31,
+            placeholder: "1-31",
+            class: "w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white" %>
+      </div>
+
+      <!-- 설명 (선택사항) -->
+      <div>
+        <%= form.label :description, "설명 (선택사항)", class: "block text-sm font-medium text-gray-700 mb-1" %>
+        <%= form.text_area :description,
+            rows: 2,
+            class: "w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white resize-none" %>
+      </div>
+
+      <!-- 활성/비활성 -->
+      <div>
+        <label class="flex items-center space-x-2">
+          <%= form.check_box :active, class: "w-4 h-4 text-indigo-600 bg-gray-100 border-gray-300 rounded focus:ring-indigo-500 focus:ring-2" %>
+          <span class="text-sm font-medium text-gray-700">활성화</span>
+        </label>
+      </div>
+
+      <div class="flex justify-between">
+        <%= link_to "취소", recurring_tasks_path, 
+            class: "px-6 py-3 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-all duration-200 shadow-sm cursor-pointer touch-friendly" %>
+        <%= form.submit "수정하기", 
+            class: "px-6 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-semibold rounded-xl hover:from-purple-600 hover:to-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transform hover:scale-105 transition-all duration-200 shadow-lg cursor-pointer touch-friendly hover-lift focus-ring" %>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<script>
+function toggleFrequencyOptions(frequency) {
+  const weeklyOptions = document.getElementById('weekly-options');
+  const monthlyOptions = document.getElementById('monthly-options');
+  
+  // 모든 옵션 숨기기
+  weeklyOptions.style.display = 'none';
+  monthlyOptions.style.display = 'none';
+  
+  // 선택된 주기에 따라 옵션 표시
+  if (frequency === 'weekly') {
+    weeklyOptions.style.display = 'block';
+  } else if (frequency === 'monthly') {
+    monthlyOptions.style.display = 'block';
+  }
+}
+
+// 페이지 로드 시 현재 설정에 따라 옵션 표시
+document.addEventListener('DOMContentLoaded', function() {
+  const frequency = document.querySelector('[name="recurring_task[frequency]"]').value;
+  toggleFrequencyOptions(frequency);
+});
+</script>

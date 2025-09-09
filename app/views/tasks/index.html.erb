@@ -1,0 +1,406 @@
+
+<!-- Progress Bar -->
+<div class="mb-8 animate-fade-in">
+  <div class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-4">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+      <div class="flex items-center space-x-3">
+        <div class="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+          <span class="text-white text-sm">📊</span>
+        </div>
+        <div class="text-sm text-gray-700">
+          <span class="font-semibold">진행률:</span>
+          <% total_tasks = @incomplete_tasks.count + @completed_tasks.count %>
+          <% if total_tasks > 0 %>
+            <% completion_rate = (@completed_tasks.count.to_f / total_tasks * 100).round %>
+            <span class="text-indigo-600 font-bold"><%= completion_rate %>% 완료</span>
+          <% else %>
+            <span class="text-gray-500">시작하기</span>
+          <% end %>
+        </div>
+      </div>
+      <div class="flex items-center justify-center sm:justify-end space-x-3 sm:space-x-4 text-sm">
+        <div class="flex items-center space-x-1">
+          <span class="w-3 h-3 bg-orange-400 rounded-full flex-shrink-0"></span>
+          <span class="text-gray-600 whitespace-nowrap">진행 <%= @incomplete_tasks.count %></span>
+        </div>
+        <div class="flex items-center space-x-1">
+          <span class="w-3 h-3 bg-green-400 rounded-full flex-shrink-0"></span>
+          <span class="text-gray-600 whitespace-nowrap">완료 <%= @completed_tasks.count %></span>
+        </div>
+      </div>
+    </div>
+    <% if (@incomplete_tasks.count + @completed_tasks.count) > 0 %>
+      <div class="mt-4 w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+        <div class="bg-gradient-to-r from-green-400 to-green-600 h-2 rounded-full transition-all duration-500 ease-out" 
+             style="width: <%= (@completed_tasks.count.to_f / (@incomplete_tasks.count + @completed_tasks.count) * 100).round %>%"></div>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<!-- New Task Form -->
+<div class="mb-8 animate-slide-in-up">
+  <div class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-6 glass hover-glow">
+    <%= form_with(model: @task, url: tasks_path, method: :post, local: true, class: "space-y-4") do |form| %>
+      <div class="flex flex-col gap-4">
+        <!-- 할일 입력 -->
+        <div class="flex-grow">
+          <%= form.text_field :content, 
+              placeholder: "새로운 할 일을 입력하세요...", 
+              class: "w-full px-4 py-3 text-lg border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white custom-input focus-ring touch-friendly",
+              required: true,
+              autocomplete: "off",
+              maxlength: 200 %>
+        </div>
+        
+        <!-- 반복 주기 선택 버튼 -->
+        <div class="flex flex-col space-y-3">
+          <label class="text-sm font-medium text-gray-700">반복 주기 (선택사항)</label>
+          <div class="flex gap-2">
+            <!-- 일일 버튼 -->
+            <button type="button" 
+                    class="recurring-option flex-1 px-4 py-2 text-sm border-2 border-gray-200 rounded-lg transition-all duration-200 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+                    data-frequency="daily"
+                    onclick="selectRecurringOption(this, 'daily')">
+              <div class="text-center">
+                <div class="font-semibold">일일</div>
+                <div class="text-xs text-gray-500">월~금 08:30</div>
+              </div>
+            </button>
+            
+            <!-- 주간 버튼 -->
+            <button type="button" 
+                    class="recurring-option flex-1 px-4 py-2 text-sm border-2 border-gray-200 rounded-lg transition-all duration-200 hover:border-green-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-1"
+                    data-frequency="weekly"
+                    onclick="selectRecurringOption(this, 'weekly')">
+              <div class="text-center">
+                <div class="font-semibold">주간</div>
+                <div class="text-xs text-gray-500">매주 월 08:30</div>
+              </div>
+            </button>
+            
+            <!-- 월간 버튼 -->
+            <button type="button" 
+                    class="recurring-option flex-1 px-4 py-2 text-sm border-2 border-gray-200 rounded-lg transition-all duration-200 hover:border-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-1"
+                    data-frequency="monthly"
+                    onclick="selectRecurringOption(this, 'monthly')">
+              <div class="text-center">
+                <div class="font-semibold">월간</div>
+                <div class="text-xs text-gray-500">매월 1일 08:30</div>
+              </div>
+            </button>
+          </div>
+        </div>
+        
+        <!-- 숨겨진 필드들 -->
+        <%= form.hidden_field :recurring_frequency, id: 'recurring_frequency' %>
+        
+        <!-- 추가 버튼 -->
+        <div class="flex justify-end">
+          <%= form.submit "추가하기", 
+              class: "px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold rounded-xl hover:from-indigo-600 hover:to-purple-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transform hover:scale-105 transition-all duration-200 shadow-lg cursor-pointer touch-friendly hover-lift focus-ring" %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<script>
+let selectedFrequency = null;
+
+function selectRecurringOption(button, frequency) {
+  // 모든 버튼 초기화
+  document.querySelectorAll('.recurring-option').forEach(btn => {
+    btn.classList.remove('selected');
+    btn.classList.remove('bg-blue-100', 'border-blue-500', 'text-blue-700');
+    btn.classList.remove('bg-green-100', 'border-green-500', 'text-green-700');
+    btn.classList.remove('bg-purple-100', 'border-purple-500', 'text-purple-700');
+    btn.classList.add('border-gray-200', 'text-gray-700');
+  });
+  
+  // 같은 버튼을 다시 클릭한 경우 선택 해제
+  if (selectedFrequency === frequency) {
+    selectedFrequency = null;
+    document.getElementById('recurring_frequency').value = '';
+    return;
+  }
+  
+  // 선택된 버튼 활성화
+  selectedFrequency = frequency;
+  document.getElementById('recurring_frequency').value = frequency;
+  
+  button.classList.add('selected');
+  button.classList.remove('border-gray-200', 'text-gray-700');
+  
+  // 주기별 스타일 적용
+  if (frequency === 'daily') {
+    button.classList.add('bg-blue-100', 'border-blue-500', 'text-blue-700');
+  } else if (frequency === 'weekly') {
+    button.classList.add('bg-green-100', 'border-green-500', 'text-green-700');
+  } else if (frequency === 'monthly') {
+    button.classList.add('bg-purple-100', 'border-purple-500', 'text-purple-700');
+  }
+}
+</script>
+
+<!-- Tasks Container -->
+<div class="space-y-6">
+  <!-- Active Tasks -->
+  <% if @incomplete_tasks.any? %>
+    <div class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-6">
+      <div class="flex items-center mb-6">
+        <div class="w-8 h-8 bg-gradient-to-br from-orange-400 to-orange-600 rounded-lg flex items-center justify-center mr-3">
+          <span class="text-white text-sm font-bold">⏳</span>
+        </div>
+        <h3 class="text-xl font-bold text-gray-800">진행중인 할 일</h3>
+        <span class="ml-auto bg-orange-100 text-orange-800 text-sm font-medium px-3 py-1 rounded-full">
+          <%= @incomplete_tasks.count %>개
+        </span>
+      </div>
+      
+      <div class="space-y-3">
+        <% @incomplete_tasks.each_with_index do |task, index| %>
+          <div class="group bg-gray-50/80 hover:bg-white rounded-xl p-4 transition-all duration-200 hover:shadow-md border border-gray-100 hover-lift mobile-card animate-fade-in touch-friendly" style="animation-delay: <%= (index * 0.1) %>s;">
+            <%= form_with(model: task, url: task_path(task), method: :patch, local: true, class: "flex items-center justify-between") do |form| %>
+              <div class="flex items-center flex-grow">
+                <div class="relative touch-friendly">
+                  <%= form.check_box :done, 
+                      { onchange: 'this.form.submit()', 
+                        class: 'sr-only peer',
+                        id: "task_#{task.id}_done" } %>
+                  <label for="task_<%= task.id %>_done" class="w-6 h-6 bg-white border-2 border-gray-300 rounded-lg peer-checked:bg-gradient-to-r peer-checked:from-green-400 peer-checked:to-green-600 peer-checked:border-green-500 transition-all duration-200 cursor-pointer flex items-center justify-center hover:border-indigo-400 hover:shadow-sm custom-checkbox">
+                    <svg class="w-4 h-4 text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-200 checkmark" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                    </svg>
+                  </label>
+                </div>
+                <span class="ml-4 text-lg text-gray-800 group-hover:text-gray-900 font-medium transition-colors duration-200 no-select mobile-text">
+                  <%= task.content %>
+                </span>
+              </div>
+              <div class="flex items-center space-x-2 opacity-0 group-hover:opacity-100 sm:opacity-100 transition-opacity duration-200">
+                <% if task.recurring? %>
+                  <span class="text-xs font-medium px-2 py-1 rounded-lg <%= 
+                    case task.recurring_task.frequency
+                    when 'daily'
+                      'bg-blue-100 text-blue-700 border border-blue-200'
+                    when 'weekly'
+                      'bg-green-100 text-green-700 border border-green-200'
+                    when 'monthly'
+                      'bg-purple-100 text-purple-700 border border-purple-200'
+                    else
+                      'bg-gray-100 text-gray-700 border border-gray-200'
+                    end
+                  %>">
+                    <%= task.recurring_frequency_display %>
+                  </span>
+                <% end %>
+                <span class="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-full hover:bg-gray-200 transition-colors duration-150">
+                  #<%= index + 1 %>
+                </span>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% else %>
+    <!-- Empty State for Active Tasks -->
+    <div class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8 text-center">
+      <div class="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+        <span class="text-gray-400 text-3xl">📝</span>
+      </div>
+      <h3 class="text-xl font-semibold text-gray-700 mb-2">할 일이 없습니다</h3>
+      <p class="text-gray-500">새로운 할 일을 추가해서 하루를 시작해보세요!</p>
+    </div>
+  <% end %>
+
+  <!-- Completed Tasks -->
+  <% if @completed_tasks.any? %>
+    <div class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-6">
+      <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center">
+          <div class="w-8 h-8 bg-gradient-to-br from-green-400 to-green-600 rounded-lg flex items-center justify-center mr-3">
+            <span class="text-white text-sm font-bold">✓</span>
+          </div>
+          <h3 class="text-xl font-bold text-gray-800">완료된 할 일</h3>
+          <span class="ml-3 bg-green-100 text-green-800 text-sm font-medium px-3 py-1 rounded-full">
+            <%= @completed_tasks.count %>개
+          </span>
+        </div>
+        <button type="button" 
+                onclick="toggleSection('completed-tasks')"
+                class="flex items-center space-x-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-lg transition-all duration-200">
+          <span id="completed-tasks-icon">▶️</span>
+          <span id="completed-tasks-text">펴기</span>
+        </button>
+      </div>
+      
+      <div id="completed-tasks-content" class="space-y-3 transition-all duration-300 ease-in-out overflow-hidden" style="display: none;">
+        <% @completed_tasks.each_with_index do |task, index| %>
+          <div class="group bg-green-50/50 hover:bg-green-50 rounded-xl p-4 transition-all duration-200 hover:shadow-sm border border-green-100/50 mobile-card animate-fade-in touch-friendly" style="animation-delay: <%= (index * 0.1) %>s;">
+            <%= form_with(model: task, url: task_path(task), method: :patch, local: true, class: "flex items-center justify-between") do |form| %>
+              <div class="flex items-center flex-grow">
+                <div class="relative touch-friendly">
+                  <%= form.check_box :done, 
+                      { checked: true, 
+                        onchange: 'this.form.submit()', 
+                        class: 'sr-only peer',
+                        id: "task_#{task.id}_done" } %>
+                  <label for="task_<%= task.id %>_done" class="w-6 h-6 bg-gradient-to-r from-green-400 to-green-600 border-2 border-green-500 rounded-lg transition-all duration-200 cursor-pointer flex items-center justify-center hover:shadow-lg">
+                    <svg class="w-4 h-4 text-white checkmark" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                    </svg>
+                  </label>
+                </div>
+                <span class="ml-4 text-lg text-gray-600 line-through font-medium no-select mobile-text">
+                  <%= task.content %>
+                </span>
+              </div>
+              <div class="flex items-center space-x-2">
+                <% if task.recurring? %>
+                  <span class="text-xs font-medium px-2 py-1 rounded-lg <%= 
+                    case task.recurring_task.frequency
+                    when 'daily'
+                      'bg-blue-100 text-blue-700 border border-blue-200'
+                    when 'weekly'
+                      'bg-green-100 text-green-700 border border-green-200'
+                    when 'monthly'
+                      'bg-purple-100 text-purple-700 border border-purple-200'
+                    else
+                      'bg-gray-100 text-gray-700 border border-gray-200'
+                    end
+                  %>">
+                    <%= task.recurring_frequency_display %>
+                  </span>
+                <% end %>
+                <span class="text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full font-medium hover:bg-green-200 transition-colors duration-150">
+                  완료
+                </span>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- Recurring Tasks -->
+  <% if @recurring_tasks.any? %>
+    <div class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-6">
+      <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center">
+          <div class="w-8 h-8 bg-gradient-to-br from-indigo-400 to-indigo-600 rounded-lg flex items-center justify-center mr-3">
+            <span class="text-white text-sm font-bold">🔄</span>
+          </div>
+          <h3 class="text-xl font-bold text-gray-800">반복 할일 리스트</h3>
+          <span class="ml-3 bg-indigo-100 text-indigo-800 text-sm font-medium px-3 py-1 rounded-full">
+            <%= @recurring_tasks.count %>개
+          </span>
+        </div>
+        <button type="button" 
+                onclick="toggleSection('recurring-tasks')"
+                class="flex items-center space-x-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-lg transition-all duration-200">
+          <span id="recurring-tasks-icon">▶️</span>
+          <span id="recurring-tasks-text">펴기</span>
+        </button>
+      </div>
+      
+      <div id="recurring-tasks-content" class="space-y-3 transition-all duration-300 ease-in-out overflow-hidden" style="display: none;">
+        <% @recurring_tasks.each_with_index do |recurring_task, index| %>
+          <div class="group bg-gray-50/80 hover:bg-white rounded-xl p-4 transition-all duration-200 hover:shadow-md border border-gray-100 hover-lift mobile-card animate-fade-in touch-friendly" style="animation-delay: <%= (index * 0.1) %>s;">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center flex-grow">
+                <div class="w-6 h-6 bg-gradient-to-r from-indigo-400 to-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <span class="text-white text-xs">🔄</span>
+                </div>
+                <span class="ml-4 text-lg text-gray-800 group-hover:text-gray-900 font-medium transition-colors duration-200 no-select mobile-text">
+                  <%= recurring_task.content %>
+                </span>
+              </div>
+              <div class="flex items-center space-x-2">
+                <span class="text-xs font-medium px-2 py-1 rounded-lg <%= 
+                  case recurring_task.frequency
+                  when 'daily'
+                    'bg-blue-100 text-blue-700 border border-blue-200'
+                  when 'weekly'
+                    'bg-green-100 text-green-700 border border-green-200'
+                  when 'monthly'
+                    'bg-purple-100 text-purple-700 border border-purple-200'
+                  else
+                    'bg-gray-100 text-gray-700 border border-gray-200'
+                  end
+                %>">
+                  <%= case recurring_task.frequency
+                      when 'daily' then '일일'
+                      when 'weekly' then '주간'
+                      when 'monthly' then '월간'
+                      else recurring_task.frequency
+                      end %>
+                </span>
+                <button type="button" 
+                        onclick="deleteRecurringTask(<%= recurring_task.id %>, '<%= recurring_task.content %>')"
+                        class="w-6 h-6 bg-red-100 hover:bg-red-200 text-red-600 hover:text-red-700 rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-110 cursor-pointer touch-friendly">
+                  <span class="text-sm font-bold">✕</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+</div>
+
+<script>
+function toggleSection(sectionId) {
+  const content = document.getElementById(sectionId + '-content');
+  const icon = document.getElementById(sectionId + '-icon');
+  const text = document.getElementById(sectionId + '-text');
+  
+  if (content && icon && text) {
+    if (content.style.display === 'none') {
+      // 펴기
+      content.style.display = 'block';
+      icon.textContent = '▼';
+      text.textContent = '접기';
+    } else {
+      // 접기
+      content.style.display = 'none';
+      icon.textContent = '▶️';
+      text.textContent = '펴기';
+    }
+  }
+}
+
+function deleteRecurringTask(id, content) {
+  if (confirm(`"${content}" 반복 할일을 삭제하시겠습니까?`)) {
+    // 삭제 요청을 위한 폼을 동적으로 생성하고 제출
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/recurring_tasks/${id}`;
+    form.style.display = 'none';
+    
+    // Rails의 CSRF 토큰 추가
+    const csrfToken = document.querySelector('meta[name="csrf-token"]');
+    if (csrfToken) {
+      const csrfInput = document.createElement('input');
+      csrfInput.type = 'hidden';
+      csrfInput.name = 'authenticity_token';
+      csrfInput.value = csrfToken.getAttribute('content');
+      form.appendChild(csrfInput);
+    }
+    
+    // HTTP METHOD 오버라이드를 위한 _method 파라미터 추가
+    const methodInput = document.createElement('input');
+    methodInput.type = 'hidden';
+    methodInput.name = '_method';
+    methodInput.value = 'DELETE';
+    form.appendChild(methodInput);
+    
+    document.body.appendChild(form);
+    form.submit();
+  }
+}
+</script>
+

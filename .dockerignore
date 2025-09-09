@@ -1,0 +1,44 @@
+# Git
+.git
+.gitignore
+
+# Documentation
+README.md
+DEPLOYMENT.md
+
+# Development files
+.env
+development.env
+
+# Logs
+log/*.log
+tmp/
+
+# Node modules (if any)
+node_modules/
+
+# Coverage reports
+coverage/
+
+# Test files
+test/
+spec/
+features/
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+*.gem
+*.rbc
+
+# Temporary files
+*.tmp
+*.temp

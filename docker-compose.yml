@@ -1,0 +1,45 @@
+services:
+  todolist:
+    build: .
+    container_name: todolist-app
+    ports:
+      - "4204:4204"
+    volumes:
+      # SQLite 데이터베이스 영구 보존 (Named Volume 사용)
+      - todolist_db:/app/db
+      # Rails 8.0 storage 디렉토리 (실제 DB 파일 위치)
+      - todolist_storage:/app/storage
+      # 로그 파일 영구 보존
+      - todolist_logs:/app/log
+      # 임시 파일 및 크론 로그 영구 보존
+      - todolist_tmp:/app/tmp
+    environment:
+      - RAILS_ENV=production
+      - RAILS_SERVE_STATIC_FILES=true
+      - RAILS_LOG_TO_STDOUT=true
+      - TZ=Asia/Seoul
+    env_file:
+      - production.env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4204"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+# Named Volumes 정의 - 데이터 영구 보존
+volumes:
+  todolist_db:
+    driver: local
+  todolist_storage:
+    driver: local
+  todolist_logs:
+    driver: local
+  todolist_tmp:
+    driver: local
+
+# 네트워크 설정 (선택사항)
+networks:
+  default:
+    driver: bridge
